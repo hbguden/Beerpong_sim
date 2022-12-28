@@ -1,5 +1,6 @@
 # Beerpong_sim
 simulator for beerpong
+Libraries needed: Pygame, numpy
 
 #To import the environment
 Import from beerpong_bot import beerpong_bot
