@@ -7,16 +7,22 @@ from ground import ground
 __credits__ = ["Oscar Hastad Bjornstad"]
 
 class beerpong_bot():
+    #environment for training on beerpong for computers
+    #functions for use by outsiders:
+    #reset()    : returns next_state, reward, terminated
+    #step()     : returns next_state, reward, terminated
+
+    #next_state contains: theta for each joint, x endeffector, y endeffector, x_velocity endeffector, y_velocity endeffector, distance from base to first cup, angle from base to first cup (center), distance to ball from endeffector, 1 if we hold the ball else 0
 
     def __init__(self, render_mode=""):
 
         self.dt=1/120 #120hz sim
         self.dof_colours=[(104,149,197),(7,87,152)]
-        self.manipulator=dof(2,[0.2,0.2], [0.5,0.5], max_speed=[5.8*self.dt,5.8*self.dt])
+        self.manipulator=dof(2,[0.2,0.2], [0.5,0.5], max_speed=[5.8*self.dt,5.8*self.dt]) #there is probably a more dynamic way to make this object since all the other code is not hardcoded
         self.ball=ball([0.9,0.5])
         glass=cup(position=[1.65,0.55])
-        self.cups=[glass]
-        self.floor=ground([0,0.5] ,[2,0.5])
+        self.cups=[glass] #list of all cups
+        self.floor=ground([0,0.5] ,[2,0.5]) # is should have called this one table...
         self.ball_min_dist=0.05 #distance from cup before we check if colision
         self.dof_with=5
         self.SCALE=200
@@ -48,6 +54,7 @@ class beerpong_bot():
                 self.cup_th=np.arctan2(glass.y-self.manipulator.position[1],glass.x-self.manipulator.position[0])
 
     def reset(self):
+        #a function to reset the env. (it just calls init.) returns the same as step
         self.__init__(render_mode=self.render_mode)
         next_state=[]
         for i in range(self.manipulator.joint_amount):
@@ -61,10 +68,10 @@ class beerpong_bot():
         next_state.append(self.cup_th)
         next_state.append(np.sqrt((endeffector_pos[0,3]-self.ball.x)**2 + (endeffector_pos[0,3]-self.ball.x)**2)) #distance to ball endeffector
         next_state.append(int(self.ball.grab)) #if we have the ball
-        return (next_state, 0, False)
+        return (np.asarray(next_state), 0, False)
 
     def drawDOF(self, dof, width, colours, screen):
-        #draws manipulator on screen
+        #draws manipulator when rendermode=human
         pos0=dof.getJoint_position(0)
         pos0=(pos0[0,3]*self.SCALE, self.screen_shape[1]-pos0[1,3]*self.SCALE)
         for i in range(dof.joint_amount):
@@ -75,13 +82,13 @@ class beerpong_bot():
             pos0=pos1
 
     def drawBall(self,ball, width, colour, screen):
-        #draws ball
+        #draws ball when render mode=human
         pos=(ball.x*self.SCALE, self.screen_shape[1]-ball.y*self.SCALE)
         self.pygame.draw.circle(screen, (0,0,0), pos, width+1)
         self.pygame.draw.circle(screen, colour, pos, width)
 
     def drawCup(self,cup,colour,screen):
-        #draws cup
+        #draws cup when render mode=human
         corners=[None]*4
         for i in range(len(corners)):
             corner=cup.corners[i]
@@ -89,13 +96,15 @@ class beerpong_bot():
         self.pygame.draw.polygon(screen,colour,corners)
 
     def draw_floor(self,screen,floor):
+        #draws the floor when rendermode=human
         pos0=(int(floor.position[0][0]*self.SCALE), int((self.screen_shape[1] - floor.position[0][1]*self.SCALE/2)))
         pos1=(int(floor.position[1][0]*self.SCALE), int((self.screen_shape[1] - floor.position[1][1]*self.SCALE/2)))
         width=int(floor.position[0][1]*self.SCALE)
         self.pygame.draw.line(screen, floor.colour, pos0, pos1, width)
 
-    def intersect(self,s0, s1): #[[x,y],[x,y]]
-        #returns point where they intersect
+    def intersect(self,s0, s1): #[[x,y],[x,y]] There is probably a faster way to do this
+        #returns point where they intersect or None if they dont intersect
+        #the 10 first lines here were borrowed from BenMan95 on stack overflow
         dx0 = s0[1][0]-s0[0][0]
         dx1 = s1[1][0]-s1[0][0]
         dy0 = s0[1][1]-s0[0][1]
@@ -106,6 +115,7 @@ class beerpong_bot():
         p3 = dy0*(s0[1][0]-s1[1][0]) - dx0*(s0[1][1]-s1[1][1])
         if not ( (p0*p1<=0) & (p2*p3<=0)):
             return None
+
         #they intersect, time to find out where!
         c1=dy0*s0[0][0] + dx0*s0[0][1]
         c2=dy1*s0[1][0] + dx1*s0[1][1]
@@ -122,7 +132,7 @@ class beerpong_bot():
             return np.asarray([x,y])
 
     def bounce(self, vector1, vector2):
-        #finds vector to follow when we bounce on a wall
+        #finds vector to follow when we bounce on a wall. Returns normalized vector for bounce
         vec1=np.asarray(vector1)
         vec2=np.asarray(vector2)
         vec1_proj=vec2*(np.dot(vec1,vec2)/np.dot(vec2,vec2)) #projection of vec1 on vec2
@@ -173,7 +183,7 @@ class beerpong_bot():
                     if (self.intersect([self.ball.position,pos_ball],[glass.corners[3],glass.corners[0]]) is not None):
                         self.cup_filled_pos=np.asarray([glass.x,glass.y])
 
-            if (pos_ball[1] < self.floor.position[0][1]) and (pos_ball[0] > self.floor.position[0][0]) and (pos_ball[0] < self.floor.position[1][0]):  #check for collition with floor
+            if (pos_ball[1] < self.floor.position[0][1]) and (pos_ball[0] > self.floor.position[0][0]) and (pos_ball[0] < self.floor.position[1][0]):  #check for if we hit the floor/table
                 #print("calcint")
                 intersection=self.intersect([self.ball.position,pos_ball],self.floor.position)
                 if (intersection is not None):
@@ -196,6 +206,8 @@ class beerpong_bot():
                 self.ball.set_pos(pos_ball)
             else:
                 self.ball.set_pos(pos_ball, self.dt)
+
+        #time to create the msg to the network so we can get a new input
         next_state=[] # joint angles, endeffector pos, distance and angle towards closest cup (operation space) , distance to ball endeffector
         for index in range(self.manipulator.joint_amount):
             next_state.append(self.manipulator.theta[index]) #add thetas
@@ -209,10 +221,10 @@ class beerpong_bot():
         next_state.append(np.sqrt((endeffector_pos_new[0,3]-self.ball.x)**2 + (endeffector_pos_new[0,3]-self.ball.x)**2)) #distance to ball endeffector
         next_state.append(int(self.ball.grab)) #if we have the ball
 
-        #calculate reward:
+        #calculate reward: probably needs some tuning
         if (self.ball.grab==False):
             if self.ball.x>self.deltaX_ball:
-                if (self.ball.y>self.cups[0].corners[0][1]):
+                if (self.ball.y>self.cups[0].corners[0][1]): #more reward if we are above the cup. this is to limit the bounces the robot makes
                     if self.ball.x<self.cups[-1].corners[1][0]: # add reward while we are in front of the last cup
                         reward+=50*(self.ball.x-self.deltaX_ball)
                     else:
@@ -224,9 +236,11 @@ class beerpong_bot():
                         reward+=20*(self.cups[-1].corners[1][0]-self.ball.x)
                 self.deltaX_ball=self.ball.x
 
-        return (np.asarray(next_state), reward, self.ball.y<0 or self.in_cup==0)
+        return (np.asarray(next_state), reward, self.ball.y<0 or self.in_cup==0) #next_state, reward, terminated
 
     def step(self, grip, *theta):
+        #takes in (grip:boolean, theta* :angles in radians) grip: if we want to grab or not. theta: angle for each joint
+        #step function: Runs the environment, and renders if needed. returns next_state, reward, terminated
         if self.render_mode=="human":
             self.screen.fill((255,255,255))
             self.clock.tick(60)
@@ -241,12 +255,15 @@ class beerpong_bot():
 
 #testcode
 if __name__ == "__main__":
+    #make the environment
     env=beerpong_bot(render_mode="human")
     #env=beerpong_bot(render_mode="")
     data, reward, t = env.reset()
+    #if we want to add more joints we can change the env.manipulator=dof(read_dof_documentation). the reset function will override this, soooo...
+    #we can add more cups by calling env.cups.append(cup(read_cup_documenation))
     fitness=0
     while not t:
-        grabit=np.random.rand()>0.5
+        grabit=np.random.rand()>0.5 #true or false value
         data, reward, t= env.step(grabit, np.random.rand()*np.pi*2, np.random.rand()*np.pi*2)
         fitness+=reward
     print(fitness)

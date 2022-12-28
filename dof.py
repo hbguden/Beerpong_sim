@@ -1,26 +1,29 @@
 import numpy as np
-from numba import jit
+#code for the manipulator.
+#
+#when it is initali<ed and all thetas=0: the robot looks like this: o--o--C (2dof)
+#constraints are given on the form [(con1), (con2), (con3)] where con1 is a,b where the manipulator cannot move in the angle between a and b
 class dof:
-
     def __init__(self, joints_amount = 2, lengths =[1,1], position= [0,0], max_speed=[0.03,0.03], constraints=[(np.pi,0),(np.pi-0.2, -np.pi+0.2)]):
+        #makes the manipulator.
         self.joint_amount=joints_amount #number of joints
-        self.lengths=np.asarray(lengths) #meters
-        self.theta=np.zeros((joints_amount), dtype=np.float64)
-        self.position=np.asarray(position)
-        self.max_speed=np.asarray(max_speed)
-        self.grabber=False
-        self.grab_dist=0.02
-        self.constraints=[]
-        if constraints is None:
+        self.lengths=np.asarray(lengths) #length between joints in meters
+        self.theta=np.zeros((joints_amount), dtype=np.float64) #the angle in the joints
+        self.position=np.asarray(position) #the position of the base
+        self.max_speed=np.asarray(max_speed) #max speed for the manipulator joints. (this is the max a joint can move between every time move() gets called)
+        self.grabber=False #if you try to grab something or not
+        self.grab_dist=0.02 #the distance from the endpoint that we can grab a object. (grab tolerance)
+        self.constraints=[] #if we have some movement constraints for the angles.
+        if constraints is None: #Set it to None for no constraints
             self.constraints=None
         else:
             for c in constraints: #make sure constraints are in range 0,2pi
                 self.constraints.append( (((c[0]%(2*np.pi))+(2*np.pi))%(2*np.pi), ((c[1]%(2*np.pi))+(2*np.pi))%(2*np.pi)))
-            if len(self.constraints)<self.joint_amount:
+            if len(self.constraints)<self.joint_amount: #applies the last constrain for the rest of the joints. if you dont want a constraint for a joint it needs to be [(con1),(con2),None,(con4)]
                 for i in range(len(constraints),self.joint_amount,1):
                     self.constraints.append(self.constraints[i-1]) #the rest will use the last constrain
 
-    def config(self, length):
+    def config(self, length): #it is possible to reconfigure the length with this function
         self.lengths=np.asarray(length)
 
     def diff_rad(self, th1, th2):
@@ -36,6 +39,7 @@ class dof:
         return diff
 
     def move(self,joint_angle, joint_number):
+        #moves the given joint of the manipulator. move (pi, 0) -> will move the first joint towards pi rad
         def constrain(joint_angle, joint_number):
             if np.abs(self.diff_rad(joint_angle,self.constraints[joint_number][0])) < np.abs(self.diff_rad(joint_angle,self.constraints[joint_number][1])):
                 joint_angle=self.constraints[joint_number][0]
@@ -50,7 +54,7 @@ class dof:
             joint_angle=self.theta[joint_number]+self.max_speed[joint_number]
         joint_angle=joint_angle%(2*np.pi)
         #joint_angle is now between 0 and 2_pi
-        if self.constraints is not None:
+        if (self.constraints is not None) and (self.constraints[joint_number] is not None):
             if (joint_angle>self.constraints[joint_number][0]):
                 if (self.constraints[joint_number][0]<self.constraints[joint_number][1]):
                     if joint_angle<self.constraints[joint_number][1]:
@@ -80,4 +84,4 @@ class dof:
                             [0, 0, 1, 0],
                             [0, 0, 0, 1]])
             position=position@A
-        return position
+        return position #position matrix where [0,3] is x and [1,3] is y
