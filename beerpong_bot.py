@@ -3,6 +3,9 @@ from ball import ball
 from dof import dof
 from cup import cup
 from ground import ground
+
+__credits__ = ["Oscar Hastad Bjornstad"]
+
 class beerpong_bot():
 
     def __init__(self, render_mode=""):
