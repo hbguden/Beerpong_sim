@@ -1,5 +1,4 @@
 import numpy as np
-from numba import jit
 from ball import ball
 from dof import dof
 from cup import cup
