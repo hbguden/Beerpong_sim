@@ -143,7 +143,7 @@ class beerpong_bot():
 
     def my_eval(self, action):
         #takes takes floats, one for grab, and one for each joint
-        grip=action[0]>0.5
+        grip=action[0]>0
         theta=action[1:]
         for i in range(len(theta)):
             theta[i]*=(2*np.pi)
