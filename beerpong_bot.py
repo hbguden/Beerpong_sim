@@ -243,7 +243,7 @@ class beerpong_bot():
         return (np.asarray(next_state), reward, self.ball.y<0 or self.in_cup==0) #next_state, reward, terminated
 
     def step(self, action):
-        #action contains (grip :if bigger than 0.5 it grabs, theta1, theta2... :angles between 0 and 1) grip: if we want to grab or not. theta: angle for each joint
+        #action contains (grip :if bigger than 0 it grabs, theta1, theta2... :angles between 0 and 1) grip: if we want to grab or not. theta: angle for each joint
         #step function: Runs the environment, and renders if needed. returns next_state, reward, terminated
         if self.render_mode=="human":
             self.screen.fill((255,255,255))
@@ -268,6 +268,6 @@ if __name__ == "__main__":
     fitness=0
     t=False
     while not t:
-        data, reward, t= env.step(np.array([np.random.rand(), np.random.rand(), np.random.rand()]))
+        data, reward, t= env.step(np.array([(np.random.rand()*2 -1, np.random.rand()*2 -1, np.random.rand()*2 -1]))
         fitness+=reward
     print(fitness)
