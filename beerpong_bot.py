@@ -268,6 +268,6 @@ if __name__ == "__main__":
     fitness=0
     t=False
     while not t:
-        data, reward, t= env.step(np.array([(np.random.rand()*2 -1, np.random.rand()*2 -1, np.random.rand()*2 -1]))
+        data, reward, t= env.step(np.array([np.random.rand()*2 -1, np.random.rand()*2 -1, np.random.rand()*2 -1]))
         fitness+=reward
     print(fitness)
