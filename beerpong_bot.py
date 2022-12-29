@@ -68,7 +68,7 @@ class beerpong_bot():
         next_state.append(self.cup_th)
         next_state.append(np.sqrt((endeffector_pos[0,3]-self.ball.x)**2 + (endeffector_pos[0,3]-self.ball.x)**2)) #distance to ball endeffector
         next_state.append(int(self.ball.grab)) #if we have the ball
-        return (np.asarray(next_state), 0, False)
+        return np.asarray(next_state)
 
     def drawDOF(self, dof, width, colours, screen):
         #draws manipulator when rendermode=human
@@ -141,8 +141,12 @@ class beerpong_bot():
         return vec_out/(np.sqrt(np.dot(vec_out,vec_out))) #returns normalized vector
 
 
-    def my_eval(self,grip, *theta):
-        #takes boolean and desired theta
+    def my_eval(self, action):
+        #takes takes floats, one for grab, and one for each joint
+        grip=action[0]>0.5
+        theta=action[1:]
+        for i in range(len(theta)):
+            theta[i]*=(2*np.pi)
         #returns (next_state : np.array, reward, terminated)
         reward=0
         endeffector_start=self.manipulator.getJoint_position(self.manipulator.joint_amount)
@@ -238,8 +242,8 @@ class beerpong_bot():
 
         return (np.asarray(next_state), reward, self.ball.y<0 or self.in_cup==0) #next_state, reward, terminated
 
-    def step(self, grip, *theta):
-        #takes in (grip:boolean, theta* :angles in radians) grip: if we want to grab or not. theta: angle for each joint
+    def step(self, action):
+        #action contains (grip :if bigger than 0.5 it grabs, theta1, theta2... :angles between 0 and 1) grip: if we want to grab or not. theta: angle for each joint
         #step function: Runs the environment, and renders if needed. returns next_state, reward, terminated
         if self.render_mode=="human":
             self.screen.fill((255,255,255))
@@ -250,7 +254,7 @@ class beerpong_bot():
             self.drawCup(self.cups[0],(255,0,0),self.screen)
             self.pygame.event.pump()
             self.pygame.display.flip()
-        return self.my_eval(grip, *theta)
+        return self.my_eval(action)
 
 
 #testcode
@@ -258,12 +262,12 @@ if __name__ == "__main__":
     #make the environment
     env=beerpong_bot(render_mode="human")
     #env=beerpong_bot(render_mode="")
-    data, reward, t = env.reset()
+    data = env.reset()
     #if we want to add more joints we can change the env.manipulator=dof(read_dof_documentation). the reset function will override this, soooo...
     #we can add more cups by calling env.cups.append(cup(read_cup_documenation))
     fitness=0
+    t=False
     while not t:
-        grabit=np.random.rand()>0.5 #true or false value
-        data, reward, t= env.step(grabit, np.random.rand()*np.pi*2, np.random.rand()*np.pi*2)
+        data, reward, t= env.step(np.array([np.random.rand(), np.random.rand(), np.random.rand()]))
         fitness+=reward
     print(fitness)
