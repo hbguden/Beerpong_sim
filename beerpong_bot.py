@@ -16,6 +16,7 @@ class beerpong_bot():
 
     def __init__(self, render_mode=""):
 
+        self.time=0
         self.dt=1/120 #120hz sim
         self.dof_colours=[(104,149,197),(7,87,152)]
         self.manipulator=dof(2,[0.2,0.2], [0.5,0.5], max_speed=[5.8*self.dt,5.8*self.dt]) #there is probably a more dynamic way to make this object since all the other code is not hardcoded
@@ -143,6 +144,7 @@ class beerpong_bot():
 
     def my_eval(self, action):
         #takes takes floats, one for grab, and one for each joint
+        self.time+=1
         grip=action[0]>0
         theta=action[1:]
         for i in range(len(theta)):
@@ -157,7 +159,7 @@ class beerpong_bot():
                 self.ball.grab=True
         index=0
         for angle in theta: #move the manipulator
-            reward-=self.manipulator.move(angle,index)*3
+            #reward-=self.manipulator.move(angle,index)*3
             index+=1
         endeffector_pos=self.manipulator.getJoint_position(self.manipulator.joint_amount) #get position of endeffector
         if self.ball.grab: #move ball if we grabbed it
@@ -233,14 +235,18 @@ class beerpong_bot():
                         reward+=50*(self.ball.x-self.deltaX_ball)
                     else:
                         reward+=50*(self.cups[-1].corners[1][0]-self.ball.x)
-                else:
+                else: #less reward if below the y-level of the cup
                     if self.ball.x<self.cups[-1].corners[1][0]: # add reward while we are in front of the last cup
                         reward+=20*(self.ball.x-self.deltaX_ball)
                     else:
                         reward+=20*(self.cups[-1].corners[1][0]-self.ball.x)
                 self.deltaX_ball=self.ball.x
 
-        return (np.asarray(next_state), reward, self.ball.y<0 or self.in_cup==0) #next_state, reward, terminated
+        terminated=self.ball.y<0 or self.in_cup==0
+        if self.time==600 and self.ball.grab: #if the robot still holds the ball, just terminate
+            terminated=True
+
+        return (np.asarray(next_state), reward, terminated) #next_state, reward, terminated
 
     def step(self, action):
         #action contains (grip :if bigger than 0 it grabs, theta1, theta2... :angles between 0 and 1) grip: if we want to grab or not. theta: angle for each joint
