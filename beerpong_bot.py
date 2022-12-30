@@ -144,13 +144,13 @@ class beerpong_bot():
 
     def my_eval(self, action):
         #takes takes floats, one for grab, and one for each joint
+        reward=0
         self.time+=1
         grip=action[0]>0
         theta=action[1:]
         for i in range(len(theta)):
             theta[i]*=(2*np.pi)
         #returns (next_state : np.array, reward, terminated)
-        reward=0
         endeffector_start=self.manipulator.getJoint_position(self.manipulator.joint_amount)
         if not grip: #release ball
             self.ball.grab=False
@@ -159,7 +159,7 @@ class beerpong_bot():
                 self.ball.grab=True
         index=0
         for angle in theta: #move the manipulator
-            #reward-=self.manipulator.move(angle,index)*3
+            self.manipulator.move(angle,index)*3
             index+=1
         endeffector_pos=self.manipulator.getJoint_position(self.manipulator.joint_amount) #get position of endeffector
         if self.ball.grab: #move ball if we grabbed it
@@ -274,6 +274,6 @@ if __name__ == "__main__":
     fitness=0
     t=False
     while not t:
-        data, reward, t= env.step(np.array([np.random.rand()*2 -1, np.random.rand()*2 -1, np.random.rand()*2 -1]))
+        data, reward, t= env.step(np.array([np.random.rand(), np.random.rand(), np.random.rand()]))
         fitness+=reward
     print(fitness)
