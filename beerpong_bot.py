@@ -243,10 +243,10 @@ class beerpong_bot():
                 self.deltaX_ball=self.ball.x
 
         terminated=self.ball.y<0 or self.in_cup==0
-        if self.time==600 and self.ball.grab: #if the robot still holds the ball, just terminate
+        if self.time>600 and (self.ball.grab or self.ball.static): #if the robot still holds the ball, just terminate
             terminated=True
 
-        return (np.asarray(next_state), reward, terminated) #next_state, reward, terminated
+        return (np.asarray(next_state), reward, terminated) #next_state: Np array of 10 elements, reward: float, terminated : bool
 
     def step(self, action):
         #action contains (grip :if bigger than 0 it grabs, theta1, theta2... :angles between 0 and 1) grip: if we want to grab or not. theta: angle for each joint
@@ -274,6 +274,6 @@ if __name__ == "__main__":
     fitness=0
     t=False
     while not t:
-        data, reward, t= env.step(np.array([np.random.rand(), np.random.rand(), np.random.rand()]))
+        data, reward, t= env.step(np.array([np.random.rand()-0.5, np.random.rand(), np.random.rand()]))
         fitness+=reward
     print(fitness)
