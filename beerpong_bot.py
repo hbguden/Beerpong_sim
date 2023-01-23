@@ -149,12 +149,12 @@ class beerpong_bot():
 
     def my_eval(self, action):
         #takes takes floats, one for grab, and one for each joint
+        #returns (next_state : np.array, reward, terminated)
         reward=0
         grip=action[0]>0
         theta=action[1:]
         for i in range(len(theta)):
             theta[i]*=(2*np.pi)
-        #returns (next_state : np.array, reward, terminated)
         endeffector_start=self.manipulator.getJoint_position(self.manipulator.joint_amount)
         if not grip: #release ball
             self.ball.grab=False
@@ -163,7 +163,7 @@ class beerpong_bot():
                 self.ball.grab=True
         index=0
         for angle in theta: #move the manipulator
-            self.manipulator.move(angle,index)*3
+            angle_reward=(self.manipulator.move(angle,index))**2 #no need to square it, it is there in case we want a negative reward for the movement
             index+=1
         endeffector_pos=self.manipulator.getJoint_position(self.manipulator.joint_amount) #get position of endeffector
         if self.ball.grab: #move ball if we grabbed it
@@ -194,7 +194,6 @@ class beerpong_bot():
                         self.cup_filled_pos=np.asarray([glass.x,glass.y])
 
             if (pos_ball[1] < self.floor.position[0][1]) and (pos_ball[0] > self.floor.position[0][0]) and (pos_ball[0] < self.floor.position[1][0]):  #check for if we hit the floor/table
-                #print("calcint")
                 intersection=self.intersect([self.ball.position,pos_ball],self.floor.position)
                 if (intersection is not None):
                     if not self.floorbounce: #punishment for hitting the floor (bounce)
@@ -203,12 +202,9 @@ class beerpong_bot():
                     ball_hit=True
                     #calculate vector for bounce and velocity
                     direction=self.bounce([self.ball.x-intersection[0],self.ball.y-intersection[1]],(self.floor.position[1][0]-self.floor.position[0][0], self.floor.position[1][1]-self.floor.position[0][1]))
-                    #print("dir: ",direction)
                     overshoot_frame=pos_ball-intersection #how much we passed the wall by
                     pos_ball=intersection + (direction*np.sqrt(np.dot(overshoot_frame,overshoot_frame)))#sets position after bounce
-                    #print("position", pos_ball)
                     self.ball.velocity=direction*(np.sqrt(np.dot(self.ball.velocity,self.ball.velocity)))*self.dampening_scale1 #set the velocity, and scale it
-                    #print("vel",self.ball.velocity)
             if (self.cup_filled_pos is not None) and self.in_cup!=0:
                 self.in_cup-=1
             if self.in_cup==0:
