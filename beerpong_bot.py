@@ -40,6 +40,7 @@ class beerpong_bot():
         self.min_cup_dist=np.inf
         self.cup_th=0
         self.deltaX_ball=0.2
+        self.floorbounce=False
 
         #visual
         self.render_mode=render_mode
