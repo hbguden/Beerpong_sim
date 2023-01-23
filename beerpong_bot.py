@@ -149,7 +149,6 @@ class beerpong_bot():
     def my_eval(self, action):
         #takes takes floats, one for grab, and one for each joint
         reward=0
-        self.time+=1
         grip=action[0]>0
         theta=action[1:]
         for i in range(len(theta)):
@@ -197,6 +196,8 @@ class beerpong_bot():
                 #print("calcint")
                 intersection=self.intersect([self.ball.position,pos_ball],self.floor.position)
                 if (intersection is not None):
+                    if not self.floorbounce: #punishment for hitting the floor (bounce)
+                        self.floorbounce=True
                     # we hit the floor
                     ball_hit=True
                     #calculate vector for bounce and velocity
@@ -210,7 +211,9 @@ class beerpong_bot():
             if (self.cup_filled_pos is not None) and self.in_cup!=0:
                 self.in_cup-=1
             if self.in_cup==0:
-                reward+=100
+                reward+=100 #reward for hitting cup
+                if self.floorbounce:
+                    reward -=10
                 self.ball.set_pos(self.cup_filled_pos)
             elif ball_hit:
                 self.ball.set_pos(pos_ball)
@@ -232,25 +235,37 @@ class beerpong_bot():
         next_state.append(int(self.ball.grab)) #if we have the ball
 
         #calculate reward: probably needs some tuning
+        if self.ball.static:
+            reward+=np.sqrt((np.abs(endeffector_pos_new[0,3]-self.ball.y)-np.abs(endeffector_pos[0,3]-self.ball.y))**2 + (np.abs(endeffector_pos_new[0,3]-self.ball.x)-np.abs(endeffector_pos[0,3]-self.ball.x))**2)
         if (self.ball.grab==False):
             if self.ball.x>self.deltaX_ball:
                 if (self.ball.y>self.cups[0].corners[0][1]): #more reward if we are above the cup. this is to limit the bounces the robot makes
                     if self.ball.x<self.cups[-1].corners[1][0]: # add reward while we are in front of the last cup
-                        reward+=60*(self.ball.x-self.deltaX_ball)
+                        reward+=90*(self.ball.x-self.deltaX_ball)
                     else:
-                        reward+=40*(self.cups[-1].corners[1][0]-self.ball.x)
-                else: #less reward if below the y-level of the cup
+                        reward+=30*(self.cups[-1].corners[1][0]-self.ball.x)
+                else:
                     if self.ball.x<self.cups[-1].corners[1][0]: # add reward while we are in front of the last cup
                         reward+=40*(self.ball.x-self.deltaX_ball)
                     else:
-                        reward+=40*(self.cups[-1].corners[1][0]-self.ball.x)
+                        reward+=30*(self.cups[-1].corners[1][0]-self.ball.x)
                 self.deltaX_ball=self.ball.x
 
-        terminated=self.ball.y<0 or self.in_cup==0
-        if self.time>600 and (self.ball.grab or self.ball.static): #if the robot still holds the ball, just terminate
+        terminated=(self.ball.y<0 or self.in_cup==0)
+        #if self.ball.y<0:
+        #    reward -=10
+
+        if self.time==200:
+            self.ball.static=False
+
+        if self.time==700 and self.ball.grab:
+            #reward-=50
             terminated=True
 
-        return (np.asarray(next_state), reward, terminated) #next_state: Np array of 10 elements, reward: float, terminated : bool
+
+        self.time+=1
+        return (np.asarray(next_state), reward, terminated) #next_state, reward, terminated
+        #next_state: Np array of 10 elements, reward: float, terminated : bool
 
     def step(self, action):
         #action contains (grip :if bigger than 0 it grabs, theta1, theta2... :angles between 0 and 1) grip: if we want to grab or not. theta: angle for each joint
