@@ -18,6 +18,6 @@ next_state: np.array containing Joint_angles, endeffector x and y, velocity ende
 
 The base case for next_state is a np.array with length of 10
 
-It is solved when you have a total reward of 168
+It is solved when you have a total reward of 165 (168.3 is max)
 
 For more documentation, read in the individual files (start with beerpong_bot.py)
