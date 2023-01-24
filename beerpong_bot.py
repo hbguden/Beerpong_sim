@@ -217,7 +217,7 @@ class beerpong_bot():
             if self.in_cup==0:
                 reward+=100 #reward for hitting cup
                 if self.floorbounce:
-                    reward -=10
+                    reward -=30
                 self.ball.set_pos(self.cup_filled_pos)
             elif ball_hit:
                 self.ball.set_pos(pos_ball)
