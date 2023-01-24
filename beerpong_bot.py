@@ -14,7 +14,8 @@ class beerpong_bot():
 
     #next_state contains: theta for each joint, x endeffector, y endeffector, x_velocity endeffector, y_velocity endeffector, distance from base to first cup, angle from base to first cup (center), distance to ball from endeffector, 1 if we hold the ball else 0
 
-    def __init__(self, render_mode="", env_position="deterministic"):
+    def __init__(self, render_mode="", env_position="deterministic", multippel=1):
+        #rendermode: "" or "human" (non-visual/visual), env_position: contains "det" -> deterministic. no randomness in positions. multippel: int (amount of cup positions)
 
         if "det" in str(env_position):
             self.ball=ball([0.9,0.5])
@@ -22,6 +23,8 @@ class beerpong_bot():
         else:
             self.ball=ball([0.75+np.random.rand()*0.1,0.5])
             glass=cup(position=[1.6 + np.random.rand()*0.4,0.55])
+        self.multippel=multippel
+        self.env_position=env_position
         self.time=0
         self.dt=1/120 #120hz sim
         self.dof_colours=[(104,149,197),(7,87,152)]
@@ -37,7 +40,7 @@ class beerpong_bot():
         self.dampening_scale1=0.9 #scale for the whole velocity when we hit something
         self.in_cup=2
         self.cup_filled_pos=None
-        self.min_cup_dist=np.inf
+        self.min_cup_dist=0
         self.cup_th=0
         self.deltaX_ball=0.2
         self.floorbounce=False
@@ -51,17 +54,21 @@ class beerpong_bot():
             self.screen = pygame.display.set_mode(self.screen_shape)
             pygame.display.set_caption('Simulation')
             self.pygame=pygame
+        self.get_cup_dist()
 
         #set value for closest glass
+    def get_cup_dist(self):
+        self.min_cup_dist=np.inf
         for glass in self.cups:
             dist=np.sqrt((glass.x-self.manipulator.position[0])**2 + (glass.y-self.manipulator.position[1])**2)
             if self.min_cup_dist<dist:
                 self.min_cup_dist=dist
                 self.cup_th=np.arctan2(glass.y-self.manipulator.position[1],glass.x-self.manipulator.position[0])
 
+
     def reset(self):
         #a function to reset the env. (it just calls init.) returns the same as step
-        self.__init__(render_mode=self.render_mode)
+        self.__init__(render_mode=self.render_mode, env_position=self.env_position, multippel=self.multippel)
         next_state=[]
         for i in range(self.manipulator.joint_amount):
             next_state.append(0)
@@ -248,9 +255,12 @@ class beerpong_bot():
                         reward+=30*(self.cups[-1].corners[1][0]-self.ball.x)
                 self.deltaX_ball=self.ball.x
 
-        terminated=(self.ball.y<0 or self.in_cup==0)
-        #if self.ball.y<0:
-        #    reward -=10
+        terminated=self.ball.y<0
+        if self.in_cup==0:
+            if self.multippel<2:
+                terminated=True
+            else:
+                terminated=self.multippel_reset()
 
         if self.time==200:
             self.ball.static=False
@@ -258,11 +268,28 @@ class beerpong_bot():
         if self.time==700 and self.ball.grab:
             #reward-=50
             terminated=True
-
+        if self.time==1000:
+            terminated=True
 
         self.time+=1
         return (np.asarray(next_state), reward, terminated) #next_state, reward, terminated
         #next_state: Np array of 10 elements, reward: float, terminated : bool
+
+
+    def multippel_reset(self):
+        self.multippel-=1
+        if "det" in str(self.env_position):
+            self.ball=ball([0.9,0.5])
+            glass=cup(position=[1.65 + self.multippel*0.1,0.55])
+            self.cups[0]=glass
+        else:
+            return True # if its all random, just terminate since it gives no reason to keep on trying
+        self.floorbounce=False
+        self.time=-1
+        self.get_cup_dist()
+        self.in_cup=2
+        self.cup_filled_pos=None
+        return False
 
     def step(self, action):
         #action contains (grip :if bigger than 0 it grabs, theta1, theta2... :angles between 0 and 1) grip: if we want to grab or not. theta: angle for each joint
