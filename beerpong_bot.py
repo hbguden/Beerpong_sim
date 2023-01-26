@@ -54,16 +54,16 @@ class beerpong_bot():
             self.screen = pygame.display.set_mode(self.screen_shape)
             pygame.display.set_caption('Simulation')
             self.pygame=pygame
-        self.get_cup_dist()
+        self.get_cup_dist(self.ball.position)
 
         #set value for closest glass
-    def get_cup_dist(self):
+    def get_cup_dist(self,position):
         self.min_cup_dist=np.inf
         for glass in self.cups:
-            dist=np.sqrt((glass.x-self.manipulator.position[0])**2 + (glass.y-self.manipulator.position[1])**2)
+            dist=np.sqrt((glass.x-position[0])**2 + (glass.y-position[1])**2)
             if self.min_cup_dist<dist:
                 self.min_cup_dist=dist
-                self.cup_th=np.arctan2(glass.y-self.manipulator.position[1],glass.x-self.manipulator.position[0])
+                self.cup_th=np.arctan2(glass.y-position[1],glass.x-position[0])
 
 
     def reset(self):
@@ -224,6 +224,7 @@ class beerpong_bot():
             else:
                 self.ball.set_pos(pos_ball, self.dt)
 
+        self.get_cup_dist(self.ball.position)
         #time to create the msg to the network so we can get a new input
         next_state=[] # joint angles, endeffector pos, distance and angle towards closest cup (operation space) , distance to ball endeffector
         for index in range(self.manipulator.joint_amount):
@@ -233,8 +234,8 @@ class beerpong_bot():
         next_state.append(endeffector_pos_new[1,3])
         next_state.append(endeffector_pos_new[0,3]-endeffector_pos[0,3]) # velocityX
         next_state.append(endeffector_pos_new[1,3]-endeffector_pos[0,3]) # velocityY
-        next_state.append(self.min_cup_dist)
-        next_state.append(self.cup_th)
+        next_state.append(self.min_cup_dist) #distance between ball and cup
+        next_state.append(self.cup_th) # angle between ball and cup
         next_state.append(np.sqrt((endeffector_pos_new[0,3]-self.ball.x)**2 + (endeffector_pos_new[0,3]-self.ball.x)**2)) #distance to ball endeffector
         next_state.append(int(self.ball.grab)) #if we have the ball
 
@@ -286,7 +287,7 @@ class beerpong_bot():
             return True # if its all random, just terminate since it gives no reason to keep on trying
         self.floorbounce=False
         self.time=-1
-        self.get_cup_dist()
+        self.get_cup_dist(self.ball.position)
         self.in_cup=2
         self.cup_filled_pos=None
         return False
