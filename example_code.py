@@ -14,6 +14,6 @@ terminated=False
 
 while not terminated:
     #using np.random for random numbers, but you should use a network to send inputs derrived from the observations
-    observation, reward, terminated= env.step(np.array([np.random.rand()-0.5, np.random.rand(), np.random.rand()])) #observation is a np.array with floats of length 10. we send in 3 parameters.
+    observation, reward, terminated= env.step(np.array([np.random.rand()-0.5, 2*np.random.rand()-1, 2*np.random.rand()-1])) #observation is a np.array with floats of length 10. we send in 3 parameters.
     fitness+=reward #sum up reward
 print(fitness)

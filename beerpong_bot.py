@@ -14,10 +14,10 @@ class beerpong_bot():
 
     #next_state contains: theta for each joint, x endeffector, y endeffector, x_velocity endeffector, y_velocity endeffector, distance from base to first cup, angle from base to first cup (center), distance to ball from endeffector, 1 if we hold the ball else 0
 
-    def __init__(self, render_mode="", env_position="deterministic", multippel=1):
+    def __init__(self, render_mode="", env_position="deterministic", multippel=1, movement="force"):
         #rendermode: "" or "human" (non-visual/visual), env_position: contains "det" -> deterministic. no randomness in positions. multippel: int (amount of cup positions)
-
-        if "det" in str(env_position):
+        #movement -> 'legacy, velocity, force'
+        if "deterministic" == str(env_position):
             self.ball=ball([0.9,0.5])
             glass=cup(position=[1.65,0.55])
         else:
@@ -29,7 +29,7 @@ class beerpong_bot():
         self.dt=1/120 #120hz sim
         self.background=(192,192,192)
         self.dof_colours=[(104,149,197),(7,87,152)]
-        self.manipulator=dof(2,[0.2,0.2], [0.5,0.5], max_speed=[5.8*self.dt,5.8*self.dt]) #there is probably a more dynamic way to make this object since all the other code is not hardcoded
+        self.manipulator=dof(2,[0.2,0.2], [0.5,0.5], max_speed=[5.8*self.dt,5.8*self.dt], movement=movement) #there is probably a more dynamic way to make this object since all the other code is not hardcoded
         self.cups=[glass] #list of all cups
         self.floor=ground([0,0.5] ,[2,0.5]) # is should have called this one table...
         self.ball_min_dist=0.05 #distance from cup before we check if colision
