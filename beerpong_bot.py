@@ -27,6 +27,7 @@ class beerpong_bot():
         self.env_position=env_position
         self.time=0
         self.dt=1/120 #120hz sim
+        self.background=(192,192,192)
         self.dof_colours=[(104,149,197),(7,87,152)]
         self.manipulator=dof(2,[0.2,0.2], [0.5,0.5], max_speed=[5.8*self.dt,5.8*self.dt]) #there is probably a more dynamic way to make this object since all the other code is not hardcoded
         self.cups=[glass] #list of all cups
@@ -296,7 +297,7 @@ class beerpong_bot():
         #action contains (grip :if bigger than 0 it grabs, theta1, theta2... :angles between 0 and 1) grip: if we want to grab or not. theta: angle for each joint
         #step function: Runs the environment, and renders if needed. returns next_state, reward, terminated
         if self.render_mode=="human":
-            self.screen.fill((255,255,255))
+            self.screen.fill(self.background)
             self.clock.tick(60)
             self.draw_floor(self.screen,self.floor)
             self.drawDOF(self.manipulator, self.dof_with, self.dof_colours, self.screen)
