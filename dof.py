@@ -4,7 +4,7 @@ import numpy as np
 #when it is initali<ed and all thetas=0: the robot looks like this: o--o--C (2dof)
 #constraints are given on the form [(con1), (con2), (con3)] where con1 is a,b where the manipulator cannot move in the angle between a and b
 class dof:
-    def __init__(self, joints_amount = 2, lengths =[1,1], position= [0,0], max_speed=[0.03,0.03], constraints=[(np.pi,0),(np.pi-0.2, -np.pi+0.2)], movement='legacy'):
+    def __init__(self, joints_amount = 2, lengths =[1,1], position= [0,0], max_speed=[0.03,0.03], constraints=[(np.pi,0),(np.pi-0.2, -np.pi+0.2)], movement='acceleration'):
         #makes the manipulator.
         time_max_acceleration=10
         self.joint_amount=joints_amount #number of joints
@@ -15,7 +15,7 @@ class dof:
         self.grabber=False #if you try to grab something or not
         self.grab_dist=0.02 #the distance from the endpoint that we can grab a object. (grab tolerance)
         self.constraints=[] #if we have some movement constraints for the angles.
-        self.movement=movement #legacy, force, velocity
+        self.movement=movement #legacy, acceleration, velocity
         self.velocity_rad=np.zeros((joints_amount)) #angular velocity of joints
         self.max_acceleration = self.max_speed/time_max_acceleration #max acceleration joints, angular
         if constraints is None: #Set it to None for no constraints
@@ -54,9 +54,11 @@ class dof:
 
         if self.movement=='velocity': #then its the amount we want to move the joint
             joint_angle+=self.theta[joint_number]
-        elif self.movement=='force': #give a acceleration
+        elif self.movement=='acceleration': #give a acceleration
             sign=np.sign(joint_angle)
-            joint_angle = sign*np.minimum(self.max_acceleration[joint_number], joint_angle) + self.velocity_rad[joint_number] + self.theta[joint_number] #get the speed
+            joint_angle=sign*min(1,abs(joint_angle))*self.max_acceleration[joint_number]
+            joint_angle+= self.velocity_rad[joint_number] + self.theta[joint_number] #get the speed
+
         diff=self.diff_rad(self.theta[joint_number],joint_angle)
         if (diff<-self.max_speed[joint_number]):
             joint_angle=self.theta[joint_number]-self.max_speed[joint_number]
