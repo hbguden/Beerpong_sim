@@ -14,17 +14,18 @@ class beerpong_bot():
 
     #next_state contains: theta for each joint, x endeffector, y endeffector, x_velocity endeffector, y_velocity endeffector, distance from base to first cup, angle from base to first cup (center), distance to ball from endeffector, 1 if we hold the ball else 0
 
-    def __init__(self, render_mode="", env_position="deterministic", multippel=1, movement="force"):
+    def __init__(self, render_mode="", env_position="deterministic", multippel=1, movement="acceleration"):
         #rendermode: "" or "human" (non-visual/visual), env_position: contains "det" -> deterministic. no randomness in positions. multippel: int (amount of cup positions)
         #movement -> 'legacy, velocity, force'
         if "deterministic" == str(env_position):
-            self.ball=ball([0.9,0.5])
+            self.ball=ball([0.9,0.55])
             glass=cup(position=[1.65,0.55])
         else:
-            self.ball=ball([0.75+np.random.rand()*0.1,0.5])
+            self.ball=ball([0.75+np.random.rand()*0.1,0.55])
             glass=cup(position=[1.6 + np.random.rand()*0.4,0.55])
         self.multippel=multippel
         self.env_position=env_position
+        self.movement=movement
         self.time=0
         self.dt=1/120 #120hz sim
         self.background=(192,192,192)
@@ -69,7 +70,7 @@ class beerpong_bot():
 
     def reset(self):
         #a function to reset the env. (it just calls init.) returns the same as step
-        self.__init__(render_mode=self.render_mode, env_position=self.env_position, multippel=self.multippel)
+        self.__init__(render_mode=self.render_mode, env_position=self.env_position, multippel=self.multippel, movement=self.movement)
         next_state=[]
         for i in range(self.manipulator.joint_amount):
             next_state.append(0)
@@ -161,8 +162,9 @@ class beerpong_bot():
         reward=0
         grip=action[0]>0
         theta=action[1:]
-        for i in range(len(theta)):
-            theta[i]*=(2*np.pi)
+        if self.movement=="legacy":
+            for i in range(len(theta)):
+                theta[i]*=(2*np.pi)
         endeffector_start=self.manipulator.getJoint_position(self.manipulator.joint_amount)
         if not grip: #release ball
             self.ball.grab=False
@@ -281,7 +283,7 @@ class beerpong_bot():
     def multippel_reset(self):
         self.multippel-=1
         if "det" in str(self.env_position):
-            self.ball=ball([0.9,0.5])
+            self.ball=ball([0.9,0.55])
             glass=cup(position=[1.65 + self.multippel*0.1,0.55])
             self.cups[0]=glass
         else:
