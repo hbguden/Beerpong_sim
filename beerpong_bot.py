@@ -241,6 +241,8 @@ class beerpong_bot():
         next_state.append(self.cup_th) # angle between ball and cup
         next_state.append(np.sqrt((endeffector_pos_new[0,3]-self.ball.x)**2 + (endeffector_pos_new[0,3]-self.ball.x)**2)) #distance to ball endeffector
         next_state.append(int(self.ball.grab)) #if we have the ball
+        next_state.append(self.ball.x) #position of ball
+        next_state.append(self.ball.y)
 
         #calculate reward: probably needs some tuning
         if self.ball.static:
