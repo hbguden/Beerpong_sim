@@ -83,6 +83,8 @@ class beerpong_bot():
         next_state.append(self.cup_th)
         next_state.append(np.sqrt((endeffector_pos[0,3]-self.ball.x)**2 + (endeffector_pos[0,3]-self.ball.x)**2)) #distance to ball endeffector
         next_state.append(int(self.ball.grab)) #if we have the ball
+        next_state.append(self.ball.x)
+        next_state.append(self.ball.y)
         return np.asarray(next_state)
 
     def drawDOF(self, dof, width, colours, screen):
