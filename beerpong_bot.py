@@ -14,21 +14,23 @@ class beerpong_bot():
 
     #next_state contains: theta for each joint, x endeffector, y endeffector, x_velocity endeffector, y_velocity endeffector, distance from base to first cup, angle from base to first cup (center), distance to ball from endeffector, 1 if we hold the ball else 0
 
-    def __init__(self, render_mode="", env_position="deterministic", multippel=1):
+    def __init__(self, render_mode="", env_position="deterministic", multippel=1, movement="acceleration"):
         #rendermode: "" or "human" (non-visual/visual), env_position: contains "det" -> deterministic. no randomness in positions. multippel: int (amount of cup positions)
-
-        if "det" in str(env_position):
-            self.ball=ball([0.9,0.5])
+        #movement -> 'legacy, velocity, force'
+        if "deterministic" == str(env_position):
+            self.ball=ball([0.9,0.55])
             glass=cup(position=[1.65,0.55])
         else:
-            self.ball=ball([0.75+np.random.rand()*0.1,0.5])
+            self.ball=ball([0.75+np.random.rand()*0.1,0.55])
             glass=cup(position=[1.6 + np.random.rand()*0.4,0.55])
         self.multippel=multippel
         self.env_position=env_position
+        self.movement=movement
         self.time=0
         self.dt=1/120 #120hz sim
+        self.background=(192,192,192)
         self.dof_colours=[(104,149,197),(7,87,152)]
-        self.manipulator=dof(2,[0.2,0.2], [0.5,0.5], max_speed=[5.8*self.dt,5.8*self.dt]) #there is probably a more dynamic way to make this object since all the other code is not hardcoded
+        self.manipulator=dof(2,[0.2,0.2], [0.5,0.5], max_speed=[5.8*self.dt,5.8*self.dt], movement=movement) #there is probably a more dynamic way to make this object since all the other code is not hardcoded
         self.cups=[glass] #list of all cups
         self.floor=ground([0,0.5] ,[2,0.5]) # is should have called this one table...
         self.ball_min_dist=0.05 #distance from cup before we check if colision
@@ -54,21 +56,21 @@ class beerpong_bot():
             self.screen = pygame.display.set_mode(self.screen_shape)
             pygame.display.set_caption('Simulation')
             self.pygame=pygame
-        self.get_cup_dist()
+        self.get_cup_dist(self.ball.position)
 
         #set value for closest glass
-    def get_cup_dist(self):
+    def get_cup_dist(self,position):
         self.min_cup_dist=np.inf
         for glass in self.cups:
-            dist=np.sqrt((glass.x-self.manipulator.position[0])**2 + (glass.y-self.manipulator.position[1])**2)
+            dist=np.sqrt((glass.x-position[0])**2 + (glass.y-position[1])**2)
             if self.min_cup_dist<dist:
                 self.min_cup_dist=dist
-                self.cup_th=np.arctan2(glass.y-self.manipulator.position[1],glass.x-self.manipulator.position[0])
+                self.cup_th=np.arctan2(glass.y-position[1],glass.x-position[0])
 
 
     def reset(self):
         #a function to reset the env. (it just calls init.) returns the same as step
-        self.__init__(render_mode=self.render_mode, env_position=self.env_position, multippel=self.multippel)
+        self.__init__(render_mode=self.render_mode, env_position=self.env_position, multippel=self.multippel, movement=self.movement)
         next_state=[]
         for i in range(self.manipulator.joint_amount):
             next_state.append(0)
@@ -81,6 +83,8 @@ class beerpong_bot():
         next_state.append(self.cup_th)
         next_state.append(np.sqrt((endeffector_pos[0,3]-self.ball.x)**2 + (endeffector_pos[0,3]-self.ball.x)**2)) #distance to ball endeffector
         next_state.append(int(self.ball.grab)) #if we have the ball
+        next_state.append(self.ball.x)
+        next_state.append(self.ball.y)
         return np.asarray(next_state)
 
     def drawDOF(self, dof, width, colours, screen):
@@ -160,8 +164,9 @@ class beerpong_bot():
         reward=0
         grip=action[0]>0
         theta=action[1:]
-        for i in range(len(theta)):
-            theta[i]*=(2*np.pi)
+        if self.movement=="legacy":
+            for i in range(len(theta)):
+                theta[i]*=(2*np.pi)
         endeffector_start=self.manipulator.getJoint_position(self.manipulator.joint_amount)
         if not grip: #release ball
             self.ball.grab=False
@@ -224,6 +229,7 @@ class beerpong_bot():
             else:
                 self.ball.set_pos(pos_ball, self.dt)
 
+        self.get_cup_dist(self.ball.position)
         #time to create the msg to the network so we can get a new input
         next_state=[] # joint angles, endeffector pos, distance and angle towards closest cup (operation space) , distance to ball endeffector
         for index in range(self.manipulator.joint_amount):
@@ -233,10 +239,12 @@ class beerpong_bot():
         next_state.append(endeffector_pos_new[1,3])
         next_state.append(endeffector_pos_new[0,3]-endeffector_pos[0,3]) # velocityX
         next_state.append(endeffector_pos_new[1,3]-endeffector_pos[0,3]) # velocityY
-        next_state.append(self.min_cup_dist)
-        next_state.append(self.cup_th)
+        next_state.append(self.min_cup_dist) #distance between ball and cup
+        next_state.append(self.cup_th) # angle between ball and cup
         next_state.append(np.sqrt((endeffector_pos_new[0,3]-self.ball.x)**2 + (endeffector_pos_new[0,3]-self.ball.x)**2)) #distance to ball endeffector
         next_state.append(int(self.ball.grab)) #if we have the ball
+        next_state.append(self.ball.x) #position of ball
+        next_state.append(self.ball.y)
 
         #calculate reward: probably needs some tuning
         if self.ball.static:
@@ -279,14 +287,14 @@ class beerpong_bot():
     def multippel_reset(self):
         self.multippel-=1
         if "det" in str(self.env_position):
-            self.ball=ball([0.9,0.5])
+            self.ball=ball([0.9,0.55])
             glass=cup(position=[1.65 + self.multippel*0.1,0.55])
             self.cups[0]=glass
         else:
             return True # if its all random, just terminate since it gives no reason to keep on trying
         self.floorbounce=False
         self.time=-1
-        self.get_cup_dist()
+        self.get_cup_dist(self.ball.position)
         self.in_cup=2
         self.cup_filled_pos=None
         return False
@@ -295,7 +303,7 @@ class beerpong_bot():
         #action contains (grip :if bigger than 0 it grabs, theta1, theta2... :angles between 0 and 1) grip: if we want to grab or not. theta: angle for each joint
         #step function: Runs the environment, and renders if needed. returns next_state, reward, terminated
         if self.render_mode=="human":
-            self.screen.fill((255,255,255))
+            self.screen.fill(self.background)
             self.clock.tick(60)
             self.draw_floor(self.screen,self.floor)
             self.drawDOF(self.manipulator, self.dof_with, self.dof_colours, self.screen)

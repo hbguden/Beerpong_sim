@@ -14,7 +14,7 @@ step(action ) : takes in (grip : float, theta :angles between 0 and 1) grip: big
 returns next_state, reward, terminated
 
 
-next_state: np.array containing Joint_angles, endeffector x and y, velocity endeffector vx and vy, distance to closest cup from base, angle to closest cup from base, distance to ball from endeffector, 1 if we hold the ball else 0
+next_state: np.array containing Joint_angles, endeffector x and y, velocity endeffector vx and vy, distance to closest cup from base, angle to closest cup from base, distance to ball from endeffector, 1 if we hold the ball else 0, ball.x, ball.y
 
 The base case for next_state is a np.array with length of 10
 
